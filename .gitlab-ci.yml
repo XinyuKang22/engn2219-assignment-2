@@ -1,0 +1,16 @@
+image: benjamingray/engn2219-2022-s1-labs:ass2
+
+variables:
+  GIT_DEPTH: 1
+
+originality:
+  tags:
+    - engn2219
+  script:
+    - /scripts/validate.py --soo statement.txt
+
+build:
+  tags:
+    - engn2219
+  script:
+    - make emulator
