@@ -1,0 +1,5 @@
+make --dry-run --always-make --keep-going --print-directory
+make: Entering directory '/home/student/engn2219-assignment-2'
+gcc -Wall -Wconversion -g -Og -o emulator src/emulator.c
+make: Leaving directory '/home/student/engn2219-assignment-2'
+ 

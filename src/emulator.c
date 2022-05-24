@@ -6,15 +6,78 @@
 #define RZ 0
 #define FL 5
 #define PC 7
+#define MAX = 32767;
+#define MIN = -32768;
 
 // Global variables for ram and the register file
 unsigned short ram[ADDRSPACE];
 unsigned short registers[8];
+unsigned short pc = 0;
+unsigned short Zflag = 0;
 
+// FIXME: Instruction Execution (30%)
 void exec_inst() {
-
-    // FIXME: Instruction Execution (30%)
-
+    unsigned short inst = ram[pc++];
+    printf("inst = %u\n", inst);
+    unsigned short op =  inst >> 12;
+    unsigned short z =  (inst & 0b0000100000000000) >> 11;
+    if ((z == 1) & (Zflag == 0)) {
+        return;
+    }
+    unsigned short rd = (inst & 0b0000011100000000) >> 8;
+    unsigned short ra, rb, imm8;
+    if (op < 4) {
+        imm8 =           inst & 0b0000000011111111;
+    } else {
+        ra   =          (inst & 0b0000000001110000) >> 4;
+        rb   =           inst & 0b0000000000000111;
+    }
+    
+    signed short a, b, c;
+    switch (op) {
+        case 0b0000:    // movl
+            registers[rd] = imm8;
+            break;
+        case 0b0001:    // seth
+            registers[rd] = (imm8 << 8) + (registers[rd] & 0b0000000011111111);
+            break;
+        case 0b0100:    // str
+            ram[registers[ra]] = registers[rd];
+            break;
+        case 0b0101:    // ldr
+            registers[rd] = ram[registers[ra]];
+            break;
+        case 0b1000:    // add
+            a = registers[ra];
+            b = registers[rb];
+            c = a + b;
+            Zflag = (c != 0);
+            registers[rd] = c;
+            break;
+        case 0b1001:    // sub
+            a = registers[ra];
+            b = registers[rb];
+            c = a - b;
+            Zflag = (c != 0);
+            registers[rd] = c;
+            break;
+        case 0b1010:    // and
+            a = registers[ra];
+            b = registers[rb];
+            c = a & b;
+            Zflag = (c != 0);
+            registers[rd] = c;
+            break;
+        case 0b1011:    // orr
+            a = registers[ra];
+            b = registers[rb];
+            c = a | b;
+            Zflag = (c != 0);
+            registers[rd] = c;
+            break;
+        default:
+            break;
+    }
     return;
 }
 
@@ -28,7 +91,10 @@ void disasm() {
     return;
 }
 
-
+/*
+argc[1]: (char*) program_path
+ram[i] = (unsigned short) ((ch << 8) | cl);
+*/
 int main(int argc, char **argv) {
     if (argc != 2) {
         printf("\nUsage: %s PATH_TO_PROGRAM\n", argv[0]);
