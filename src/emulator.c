@@ -6,31 +6,39 @@
 #define RZ 0
 #define FL 5
 #define PC 7
-#define MAX = 32767;
-#define MIN = -32768;
 
 // Global variables for ram and the register file
 unsigned short ram[ADDRSPACE];
 unsigned short registers[8];
 unsigned short Zflag, Nflag, Cflag, Vflag;
 
+void parse_inst(unsigned short inst, unsigned short* p_op, unsigned short* p_z,
+                unsigned short* p_rd, unsigned short* p_ra, unsigned short* p_rb,
+                unsigned short* p_imm8) {
+    *p_op =  inst >> 12;
+    *p_z =  (inst & 0b0000100000000000) >> 11;
+    *p_rd = (inst & 0b0000011100000000) >> 8;
+    if (*p_op < 4) {
+        *p_imm8 = inst & 0b0000000011111111;
+    } else {
+        *p_ra = (inst & 0b0000000001110000) >> 4;
+        *p_rb = inst & 0b0000000000000111;
+    }
+    return;
+}
+
+
+
 // FIXME: Instruction Execution (30%)
 void exec_inst() {
     unsigned short inst = ram[registers[PC]];
     registers[PC] = registers[PC] + 1;
-    printf("inst = %u\n", inst);
-    unsigned short op =  inst >> 12;
-    unsigned short z =  (inst & 0b0000100000000000) >> 11;
+
+    unsigned short op, z, rd, ra, rb, imm8;
+    parse_inst(inst, &op, &z, &rd, &ra, &rb, &imm8);
+    disasm(op, z, rd, ra, rb, imm8);
     if ((z == 1) & (Zflag == 0)) {
         return;
-    }
-    unsigned short rd = (inst & 0b0000011100000000) >> 8;
-    unsigned short ra, rb, imm8;
-    if (op < 4) {
-        imm8 =           inst & 0b0000000011111111;
-    } else {
-        ra   =          (inst & 0b0000000001110000) >> 4;
-        rb   =           inst & 0b0000000000000111;
     }
     
     signed short a, b, c;
@@ -106,13 +114,42 @@ void exec_inst() {
     return;
 }
 
-
+// FIXME: Print disassembly (15%)
 // Note: you will almost certainly need to change the arguments and/or return
 // type for your disasm function
-void disasm() {
-
-    // FIXME: Print disassembly (15%)
-
+void disasm(unsigned short op, unsigned short z, unsigned short rd, unsigned short ra, unsigned short rb, unsigned short imm8) {
+    switch (op) {
+        case 0b0000:    // movl
+            if ((rd == 0) & (imm8 == 0)){
+                printf("nop\n");
+            } else {
+                printf("movl{%i} r%i, 0x%02X\n", z, rd, imm8);
+            }
+            break;
+        case 0b0001:    // seth
+            printf("seth{%i} r%i, 0x%02X\n", z, rd, imm8);
+            break;
+        case 0b0100:    // str
+            printf("str{%i} r%i, [r%i]\n", z, rd, ra);
+            break;
+        case 0b0101:    // ldr
+            printf("ldr{%i} r%i, [r%i]\n", z, rd, ra);
+            break;
+        case 0b1000:    // add
+            printf("add{%i} r%i, r%i, r%i\n", z, rd, ra, rb);
+            break;
+        case 0b1001:    // sub
+            printf("sub{%i} r%i, r%i, r%i\n", z, rd, ra, rb);
+            break;
+        case 0b1010:    // and
+            printf("and{%i} r%i, r%i, r%i\n", z, rd, ra, rb);
+            break;
+        case 0b1011:    // orr
+            printf("orr{%i} r%i, r%i, r%i\n", z, rd, ra, rb);
+            break;
+        default:
+            break;
+    }
     return;
 }
 
@@ -215,11 +252,15 @@ int main(int argc, char **argv) {
                 }
 
                 // FIXME: Memory Viewer (15%)
-                    printf("-------------------------------------------\n");
-                    printf("Address            Value\n");
-                    printf("-------------------------------------------\n");
+                    printf("---------------------------------------------\n");
+                    printf("Address       Value        Instruction\n");
+                    printf("---------------------------------------------\n");
                 for (int i = start; i < end; i++) {
-                    printf("0x%04X             0x%04X\n", i, ram[i]);
+                    unsigned short inst_t = ram[i];
+                    printf("0x%04X        0x%04X       ", i, inst_t);
+                    unsigned short op_t, z_t, rd_t, ra_t, rb_t, imm8_t;
+                    parse_inst(inst_t, &op_t, &z_t, &rd_t, &ra_t, &rb_t, &imm8_t);
+                    disasm(op_t, z_t, rd_t, ra_t, rb_t, imm8_t);
                 }
                     printf("-------------------------------------------\n");
                 printf("Showing memory from addresses %i to %i\n", start, end);
