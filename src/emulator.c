@@ -12,12 +12,12 @@
 // Global variables for ram and the register file
 unsigned short ram[ADDRSPACE];
 unsigned short registers[8];
-unsigned short pc = 0;
-unsigned short Zflag = 0;
+unsigned short Zflag, Nflag, Cflag, Vflag;
 
 // FIXME: Instruction Execution (30%)
 void exec_inst() {
-    unsigned short inst = ram[pc++];
+    unsigned short inst = ram[registers[PC]];
+    registers[PC] = registers[PC] + 1;
     printf("inst = %u\n", inst);
     unsigned short op =  inst >> 12;
     unsigned short z =  (inst & 0b0000100000000000) >> 11;
@@ -34,6 +34,7 @@ void exec_inst() {
     }
     
     signed short a, b, c;
+    int c_raw;
     switch (op) {
         case 0b0000:    // movl
             registers[rd] = imm8;
@@ -50,30 +51,54 @@ void exec_inst() {
         case 0b1000:    // add
             a = registers[ra];
             b = registers[rb];
-            c = a + b;
-            Zflag = (c != 0);
+            c_raw = a + b;
+            c = (signed short) c_raw;
             registers[rd] = c;
+
+            Zflag = (c == 0);
+            Nflag = (c < 0);
+            Cflag = c_raw << 16;
+            Vflag = (c_raw > 32767) | (c_raw < -32768);
+            registers[FL] = Zflag + (Nflag << 1) + (Cflag << 2) + (Vflag << 3);
             break;
         case 0b1001:    // sub
             a = registers[ra];
             b = registers[rb];
-            c = a - b;
-            Zflag = (c != 0);
+            c_raw = a - b;
+            c = (signed short) c_raw;
             registers[rd] = c;
+
+            Zflag = (c == 0);
+            Nflag = (c < 0);
+            Cflag = c_raw << 16;
+            Vflag = (c_raw > 32767) | (c_raw < -32768);
+            registers[FL] = Zflag + (Nflag << 1) + (Cflag << 2) + (Vflag << 3);
             break;
         case 0b1010:    // and
             a = registers[ra];
             b = registers[rb];
-            c = a & b;
-            Zflag = (c != 0);
+            c_raw = a & b;
+            c = (signed short) c_raw;
             registers[rd] = c;
+
+            Zflag = (c == 0);
+            Nflag = (c < 0);
+            Cflag = c_raw << 16;
+            Vflag = (c_raw > 32767) | (c_raw < -32768);
+            registers[FL] = Zflag + (Nflag << 1) + (Cflag << 2) + (Vflag << 3);
             break;
         case 0b1011:    // orr
             a = registers[ra];
             b = registers[rb];
-            c = a | b;
-            Zflag = (c != 0);
+            c_raw = a | b;
+            c = (signed short) c_raw;
             registers[rd] = c;
+
+            Zflag = (c == 0);
+            Nflag = (c < 0);
+            Cflag = c_raw << 16;
+            Vflag = (c_raw > 32767) | (c_raw < -32768);
+            registers[FL] = Zflag + (Nflag << 1) + (Cflag << 2) + (Vflag << 3);
             break;
         default:
             break;
@@ -175,9 +200,14 @@ int main(int argc, char **argv) {
                 break;
 
             case 'r':  // Print register contents
-
-                // FIXME: Register Viewer (15%)
-
+                printf("Zero Register:   %i\n", registers[0]);
+                printf("Register 1:      %i\n", registers[1]);
+                printf("Register 2:      %i\n", registers[2]);
+                printf("Register 3:      %i\n", registers[3]);
+                printf("Register 4:      %i\n", registers[4]);
+                printf("Flag register:   %i\n", registers[5]);
+                printf("undefined:       %i\n", registers[6]);
+                printf("Program Counter: %i\n", registers[7]);
                 break;
 
             case 'm':;  // View memory
