@@ -116,10 +116,6 @@ void disasm() {
     return;
 }
 
-/*
-argc[1]: (char*) program_path
-ram[i] = (unsigned short) ((ch << 8) | cl);
-*/
 int main(int argc, char **argv) {
     if (argc != 2) {
         printf("\nUsage: %s PATH_TO_PROGRAM\n", argv[0]);
@@ -219,6 +215,13 @@ int main(int argc, char **argv) {
                 }
 
                 // FIXME: Memory Viewer (15%)
+                    printf("-------------------------------------------\n");
+                    printf("Address            Value\n");
+                    printf("-------------------------------------------\n");
+                for (int i = start; i < end; i++) {
+                    printf("0x%04X             0x%04X\n", i, ram[i]);
+                }
+                    printf("-------------------------------------------\n");
                 printf("Showing memory from addresses %i to %i\n", start, end);
 
                 break;
