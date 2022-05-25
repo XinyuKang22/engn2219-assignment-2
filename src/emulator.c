@@ -7,70 +7,14 @@
 #define FL 5
 #define PC 7
 
-struct record {
-	unsigned short value;
-	struct record *next;
-};
-typedef struct record new_record;
-
 // Global variables for ram and the register file
 unsigned short ram[ADDRSPACE];
 unsigned short registers[8];
 unsigned short Zflag, Nflag, Cflag, Vflag;
-new_record head = {0, NULL};
-unsigned short top = 0;
-
-void bp_add_del(unsigned short i) {
-    new_record* item;
-    new_record* prev = &head;
-    new_record* curr = head.next;
-    while (curr != NULL)
-    {
-        if (curr->value == i)
-        {
-            prev->next = curr->next;
-            return;
-        } else if (curr->value > i)
-        {
-            item = malloc(sizeof(new_record));
-            item->value = i;
-            item->next = curr;
-            prev->next = item;
-            return;
-        } else
-        {
-            prev = curr;
-            curr = curr->next;
-        }
-    }
-    item = malloc(sizeof(new_record));
-    item->value = i;
-    prev->next = item;
-    return;
-}
-
-void bp_pop() {
-    if (head.next != NULL)
-    {
-        top = head.next->value;
-        head.next = head.next->next;
-    } else
-    {
-        top = 0;
-    }
-    return;
-}
-
-void printrecords() {
-    printf("\n");
-    printf(" the breakpoint list: \n");
-    new_record* curr = head.next;
-    while (curr != NULL)
-    {
-        printf(" %i\n", curr->value);
-        curr = curr->next;
-    }
-}
+unsigned short bp = 0;
+char s_z[2];
+char s_rd[3];
+char s_ra[3];
 
 
 void parse_inst(unsigned short inst, unsigned short* p_op, unsigned short* p_z,
@@ -185,7 +129,6 @@ void disasm(unsigned short inst, unsigned short op, unsigned short z, unsigned s
         return;
     }
 
-    char s_z[2];
     s_z[1] = '\0';
     if (z)
     {
@@ -194,7 +137,6 @@ void disasm(unsigned short inst, unsigned short op, unsigned short z, unsigned s
         s_z[0] = '\0';
     }
     
-    char s_rd[3];
     s_rd[3] = '\0';
     switch (rd)
     {
@@ -216,7 +158,6 @@ void disasm(unsigned short inst, unsigned short op, unsigned short z, unsigned s
         break;
     }
 
-    char s_ra[3];
     s_ra[3] = '\0';
     switch (ra)
     {
@@ -478,14 +419,13 @@ int main(int argc, char **argv) {
                 printf("Continuing until next breakpoint\n");
 
                 // FIXME: Breakpoints (15%) (part 1/2)
-                bp_pop();
                 int count = 0;
-                while (registers[PC] != top)
+                while (registers[PC] != bp)
                 {
                     exec_inst();
                     if (++count == ADDRSPACE)
                     {
-                        printf("Error: Stack overflow\n");
+                        printf("\nError: Stack overflow\n");
                         break;
                     }
                     
@@ -503,8 +443,13 @@ int main(int argc, char **argv) {
 
                 // FIXME: Breakpoints (15%) (part 2/2)
                 printf("Toggling breakpoint at address %i\n", bp_addr);
-                bp_add_del(bp_addr);
-                printrecords();
+                if (bp_addr == bp)
+                {
+                    bp = 0;
+                } else
+                {
+                    bp = bp_addr;
+                }
                 break;
 
             case 't':  // Print execution trace.
