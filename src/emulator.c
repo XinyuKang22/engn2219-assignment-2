@@ -7,10 +7,74 @@
 #define FL 5
 #define PC 7
 
+struct record {
+	unsigned short value;
+	struct record *next;
+};
+typedef struct record new_record;
+
 // Global variables for ram and the register file
 unsigned short ram[ADDRSPACE];
 unsigned short registers[8];
 unsigned short Zflag, Nflag, Cflag, Vflag;
+new_record head = {0, NULL};
+unsigned short top = 0;
+
+void bp_add_del(unsigned short i) {
+    new_record* item;
+    new_record* prev = &head;
+    new_record* curr = head.next;
+    while (curr != NULL)
+    {
+        if (curr->value == i)
+        {
+            prev->next = curr->next;
+            return;
+        } else if (curr->value > i)
+        {
+            item = malloc(sizeof(new_record));
+            item->value = i;
+            item->next = curr;
+            prev->next = item;
+            return;
+        } else
+        {
+            prev = curr;
+            curr = curr->next;
+        }
+    }
+    item = malloc(sizeof(new_record));
+    item->value = i;
+    prev->next = item;
+    return;
+}
+
+void bp_pop() {
+    if (head.next != NULL)
+    {
+        top = head.next->value;
+        head.next = head.next->next;
+    } else
+    {
+        top = 0;
+    }
+    return;
+}
+
+void printrecords() {
+    printf("\n");
+    printf(" the breakpoint list: \n");
+    new_record* curr = head.next;
+    while (curr != NULL)
+    {
+        printf(" %i\n", curr->value);
+        curr = curr->next;
+    }
+}
+
+
+void disasm(unsigned short op, unsigned short z, unsigned short rd, unsigned short ra, unsigned short rb, unsigned short imm8);
+
 
 void parse_inst(unsigned short inst, unsigned short* p_op, unsigned short* p_z,
                 unsigned short* p_rd, unsigned short* p_ra, unsigned short* p_rb,
@@ -271,8 +335,15 @@ int main(int argc, char **argv) {
                 printf("Continuing until next breakpoint\n");
 
                 // FIXME: Breakpoints (15%) (part 1/2)
-
-                printf("Halted on address 0x%#06x\n", registers[PC]);
+                bp_pop();
+                int count = 0;
+                while (registers[PC] != top)
+                {
+                    exec_inst();
+                    count++;
+                }
+                printf("\nHalted on address 0x%04X\n", registers[PC]);
+                printf("Executed %i instruction(s)\n", count);
                 break;
 
             case 'b':;  // Enable/disable breakpoints
@@ -284,7 +355,8 @@ int main(int argc, char **argv) {
 
                 // FIXME: Breakpoints (15%) (part 2/2)
                 printf("Toggling breakpoint at address %i\n", bp_addr);
-
+                bp_add_del(bp_addr);
+                printrecords();
                 break;
 
             case 't':  // Print execution trace.
