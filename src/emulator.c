@@ -73,9 +73,6 @@ void printrecords() {
 }
 
 
-void disasm(unsigned short op, unsigned short z, unsigned short rd, unsigned short ra, unsigned short rb, unsigned short imm8);
-
-
 void parse_inst(unsigned short inst, unsigned short* p_op, unsigned short* p_z,
                 unsigned short* p_rd, unsigned short* p_ra, unsigned short* p_rb,
                 unsigned short* p_imm8) {
@@ -100,7 +97,7 @@ void exec_inst() {
 
     unsigned short op, z, rd, ra, rb, imm8;
     parse_inst(inst, &op, &z, &rd, &ra, &rb, &imm8);
-    disasm(op, z, rd, ra, rb, imm8);
+    disasm(inst, op, z, rd, ra, rb, imm8);
     if ((z == 1) & (Zflag == 0)) {
         return;
     }
@@ -181,37 +178,183 @@ void exec_inst() {
 // FIXME: Print disassembly (15%)
 // Note: you will almost certainly need to change the arguments and/or return
 // type for your disasm function
-void disasm(unsigned short op, unsigned short z, unsigned short rd, unsigned short ra, unsigned short rb, unsigned short imm8) {
+void disasm(unsigned short inst, unsigned short op, unsigned short z, unsigned short rd, unsigned short ra, unsigned short rb, unsigned short imm8) {
+    if (rd == 6 || ra == 6 || rb == 6)
+    {
+        printf(".word %#X\n", inst);
+        return;
+    }
+
+    char s_z[2];
+    s_z[1] = '\0';
+    if (z)
+    {
+        s_z[0] = 'z';
+    } else {
+        s_z[0] = '\0';
+    }
+    
+    char s_rd[3];
+    s_rd[3] = '\0';
+    switch (rd)
+    {
+    case 0:
+        s_rd[0] = 'r';
+        s_rd[1] = 'z';
+        break;
+    case 5:
+        s_rd[0] = 'f';
+        s_rd[1] = 'l';
+        break;
+    case 7:
+        s_rd[0] = 'p';
+        s_rd[1] = 'c';
+        break;
+    default:
+        s_rd[0] = 'r';
+        s_rd[1] = rd + '0';
+        break;
+    }
+
+    char s_ra[3];
+    s_ra[3] = '\0';
+    switch (ra)
+    {
+    case 0:
+        s_ra[0] = 'r';
+        s_ra[1] = 'z';
+        break;
+    case 5:
+        s_ra[0] = 'f';
+        s_ra[1] = 'l';
+        break;
+    case 7:
+        s_ra[0] = 'p';
+        s_ra[1] = 'c';
+        break;
+    default:
+        s_ra[0] = 'r';
+        s_ra[1] = ra + '0';
+        break;
+    }
+
+    char s_rb[3];
+    s_rb[3] = '\0';
+    switch (rb)
+    {
+    case 0:
+        s_rb[0] = 'r';
+        s_rb[1] = 'z';
+        break;
+    case 5:
+        s_rb[0] = 'f';
+        s_rb[1] = 'l';
+        break;
+    case 7:
+        s_rb[0] = 'p';
+        s_rb[1] = 'c';
+        break;
+    default:
+        s_rb[0] = 'r';
+        s_rb[1] = rb + '0';
+        break;
+    }
+
+    
     switch (op) {
         case 0b0000:    // movl
-            if ((rd == 0) & (imm8 == 0)){
-                printf("nop\n");
-            } else {
-                printf("movl{%i} r%i, 0x%02X\n", z, rd, imm8);
+            // if (inst == 0){
+            //     printf(".word 0\n");
+            // } 
+            switch (rd)
+            {
+            case 0:
+                printf(".word %i\n", inst);
+                break;
+            case PC:
+                printf("jp%s %i\n", s_z, imm8);
+                break;
+            default:
+                printf("movl%s %02s, %i\n", s_z, s_rd, imm8);
+                break;
             }
             break;
         case 0b0001:    // seth
-            printf("seth{%i} r%i, 0x%02X\n", z, rd, imm8);
+            printf("seth%s %02s, %i\n", s_z, s_rd, imm8);
             break;
         case 0b0100:    // str
-            printf("str{%i} r%i, [r%i]\n", z, rd, ra);
+            printf("str%s %02s, [%02s]\n", s_z, s_rd, s_ra);
             break;
         case 0b0101:    // ldr
-            printf("ldr{%i} r%i, [r%i]\n", z, rd, ra);
+            if (rd == PC)
+            {
+                printf("jpm%s [%02s]\n", s_z, s_ra);
+            } else
+            {
+                printf("ldr%s %02s, [%02s]\n", s_z, s_rd, s_ra);
+            }
             break;
         case 0b1000:    // add
-            printf("add{%i} r%i, r%i, r%i\n", z, rd, ra, rb);
+            if (rb == 0)
+            {
+                switch (rd)
+                {
+                case 0:
+                    printf("tst%s %02s\n", s_z, s_ra);
+                    break;
+                case PC:
+                    printf("jrp%s %02s\n", s_z, s_ra);
+                    break;
+                default:
+                    printf("mov%s %02s, %02s\n", s_z, s_rd, s_ra);
+                    break;
+                }
+            } else
+            {
+                if (rd == ra)
+                {
+                    printf("add%s %02s, %02s\n", s_z, s_ra, s_rb);
+                } else
+                {
+                    printf("add%s %02s, %02s, %02s\n", s_z, s_rd, s_ra, s_rb);
+                }
+            }
             break;
         case 0b1001:    // sub
-            printf("sub{%i} r%i, r%i, r%i\n", z, rd, ra, rb);
+            if (rd == 0)
+            {
+                printf("cmp%s %02s, %02s\n", s_z, s_ra, s_rb);
+            } else
+            {
+                if (rd == ra)
+                {
+                    printf("sub%s %02s, %02s\n", s_z, s_ra, s_rb);
+                } else
+                {
+                    printf("sub%s %02s, %02s, %02s\n", s_z, s_rd, s_ra, s_rb);
+                }
+            }
             break;
         case 0b1010:    // and
-            printf("and{%i} r%i, r%i, r%i\n", z, rd, ra, rb);
+            if (rd == ra)
+            {
+                printf("and%s %02s, %02s\n", s_z, s_ra, s_rb);
+            } else
+            {
+                printf("and%s %02s, %02s, %02s\n", s_z, s_rd, s_ra, s_rb);
+            }
             break;
         case 0b1011:    // orr
-            printf("orr{%i} r%i, r%i, r%i\n", z, rd, ra, rb);
+            if (rd == ra)
+            {
+                printf("orr%s %02s, %02s\n", s_z, s_ra, s_rb);
+            } else
+            {
+                printf("orr%s %02s, %02s, %02s\n", s_z, s_rd, s_ra, s_rb);
+            }
             break;
         default:
+            printf(".word %i\n", inst);
             break;
     }
     return;
@@ -324,7 +467,7 @@ int main(int argc, char **argv) {
                     printf("0x%04X        0x%04X       ", i, inst_t);
                     unsigned short op_t, z_t, rd_t, ra_t, rb_t, imm8_t;
                     parse_inst(inst_t, &op_t, &z_t, &rd_t, &ra_t, &rb_t, &imm8_t);
-                    disasm(op_t, z_t, rd_t, ra_t, rb_t, imm8_t);
+                    disasm(inst_t, op_t, z_t, rd_t, ra_t, rb_t, imm8_t);
                 }
                     printf("-------------------------------------------\n");
                 printf("Showing memory from addresses %i to %i\n", start, end);
@@ -340,7 +483,12 @@ int main(int argc, char **argv) {
                 while (registers[PC] != top)
                 {
                     exec_inst();
-                    count++;
+                    if (++count == ADDRSPACE)
+                    {
+                        printf("Error: Stack overflow\n");
+                        break;
+                    }
+                    
                 }
                 printf("\nHalted on address 0x%04X\n", registers[PC]);
                 printf("Executed %i instruction(s)\n", count);
